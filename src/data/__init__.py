@@ -11,6 +11,9 @@ from src.data.dataset_builder import (
     ID_TO_SEVERITY,
 )
 
+from src.data.crop_dataset import LumbarCropDataset
+from src.data.augmentations import MedicalMultiSliceAugmentations
+
 __all__ = [
     "read_dicom_windowed",
     "load_dicom_series",
@@ -23,4 +26,6 @@ __all__ = [
     "SEVERITIES",
     "SEVERITY_TO_ID",
     "ID_TO_SEVERITY",
+    "LumbarCropDataset",
+    "MedicalMultiSliceAugmentations",
 ]

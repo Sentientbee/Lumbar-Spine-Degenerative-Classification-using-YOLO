@@ -86,6 +86,19 @@ class TestLumbarSpinePipeline(unittest.TestCase):
         np_loss = compute_rsna_log_loss(targets.numpy(), probs)
         self.assertAlmostEqual(loss.item(), np_loss, places=4)
 
+    def test_lumbar_crop_dataset_and_augmentation(self):
+        from src.data.crop_dataset import LumbarCropDataset
+        from src.data.augmentations import MedicalMultiSliceAugmentations
+
+        augmenter = MedicalMultiSliceAugmentations()
+        ds = LumbarCropDataset(is_synthetic=True, num_synthetic_samples=10, transform=augmenter)
+        self.assertEqual(len(ds), 10)
+
+        x, y = ds[0]
+        self.assertEqual(x.shape, (3, 128, 128))
+        self.assertTrue(y.item() in [0, 1, 2])
+        self.assertTrue(0.0 <= x.min() and x.max() <= 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()
