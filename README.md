@@ -56,7 +56,7 @@ flowchart LR
 ## 📁 Repository Structure
 
 ```
-Lumbar-Spine-Degenerative-Classification-using-YOLO/
+Spine-Degeneration-Classifier/
 ├── README.md                      # Project documentation and portfolio showcase
 ├── requirements.txt               # Pinned Python dependencies (Ultralytics >= 8.3.0)
 ├── .gitignore                     # Ignores weights, datasets, and environment credentials
@@ -77,7 +77,9 @@ Lumbar-Spine-Degenerative-Classification-using-YOLO/
 │   ├── data/
 │   │   ├── __init__.py
 │   │   ├── dicom_reader.py        # VOI LUT windowing, MONOCHROME1/2, volume loader
-│   │   └── dataset_builder.py     # Coordinate mapping & 2.5D multi-slice ROI extractor
+│   │   ├── dataset_builder.py     # Coordinate mapping & 2.5D multi-slice ROI extractor
+│   │   ├── crop_dataset.py        # LumbarCropDataset (real crops & synthetic batches)
+│   │   └── augmentations.py       # Medical multi-slice 2.5D augmentations
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── yolo_detector.py       # SpineLevelDetector (YOLO11 wrapper)
@@ -106,8 +108,8 @@ Lumbar-Spine-Degenerative-Classification-using-YOLO/
 
 ### 1. Installation
 ```bash
-git clone https://github.com/Sentientbee/Lumbar-Spine-Degenerative-Classification-using-YOLO.git
-cd Lumbar-Spine-Degenerative-Classification-using-YOLO
+git clone https://github.com/Sentientbee/Spine-Degeneration-Classifier.git
+cd Spine-Degeneration-Classifier
 
 # Create and activate virtual environment
 python -m venv venv
