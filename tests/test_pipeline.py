@@ -1,3 +1,4 @@
+import os
 import unittest
 import numpy as np
 import torch
@@ -99,6 +100,37 @@ class TestLumbarSpinePipeline(unittest.TestCase):
         self.assertTrue(y.item() in [0, 1, 2])
         self.assertTrue(0.0 <= x.min() and x.max() <= 1.0)
 
+    def test_train_and_evaluate_classifier_pipeline(self):
+        import tempfile
+        from src.pipeline.train_severity_classifier import train_severity_classifier
+        from src.pipeline.evaluate_classifier import evaluate_classifier
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # 1-epoch quick dry-run
+            history = train_severity_classifier(
+                demo=True,
+                epochs=1,
+                batch_size=8,
+                output_dir=tmp_dir,
+                device="cpu"
+            )
+            self.assertIn("best_weights_path", history)
+            weights_path = history["best_weights_path"]
+            self.assertTrue(os.path.exists(weights_path))
+
+            # Evaluate the saved checkpoint
+            eval_res = evaluate_classifier(
+                weights_path=weights_path,
+                num_test_samples=16,
+                batch_size=8,
+                device="cpu"
+            )
+            self.assertIn("accuracy", eval_res)
+            self.assertIn("rsna_log_loss", eval_res)
+            self.assertIn("confusion_matrix", eval_res)
+            self.assertEqual(eval_res["total_samples"], 16)
+
 
 if __name__ == "__main__":
     unittest.main()
+
