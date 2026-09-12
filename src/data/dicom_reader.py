@@ -139,7 +139,42 @@ def load_dicom_series(
 
     dcm_files = glob.glob(os.path.join(series_dir, "*.dcm"))
     if not dcm_files:
-        raise FileNotFoundError(f"No .dcm files found in {series_dir}")
+        # Fallback to standard image files (.jpg, .png, .npy) for demonstrations and testing
+        image_files = glob.glob(os.path.join(series_dir, "*.jpg")) + \
+                      glob.glob(os.path.join(series_dir, "*.png")) + \
+                      glob.glob(os.path.join(series_dir, "*.npy"))
+        if not image_files:
+            raise FileNotFoundError(f"No .dcm or image files found in {series_dir}")
+
+        slices_with_info = []
+        for f in image_files:
+            base = os.path.splitext(os.path.basename(f))[0]
+            inst_num = int(base) if base.isdigit() else len(slices_with_info)
+            slices_with_info.append((inst_num, f))
+        slices_with_info.sort(key=lambda x: x[0])
+
+        volume = []
+        instance_nums = []
+        for inst_num, fpath in slices_with_info:
+            if fpath.endswith('.npy'):
+                img = np.load(fpath)
+            elif Image is not None:
+                img = np.array(Image.open(fpath).convert('L'))
+            elif cv2 is not None:
+                img = cv2.imread(fpath, cv2.IMREAD_GRAYSCALE)
+            else:
+                raise ImportError("Pillow or OpenCV required to load image files.")
+
+            if target_size is not None:
+                if cv2 is not None:
+                    img = cv2.resize(img, target_size)
+                elif Image is not None:
+                    img = np.array(Image.fromarray(img).resize(target_size, resample=Image.BILINEAR))
+
+            volume.append(img.astype(np.uint8))
+            instance_nums.append(inst_num)
+
+        return np.stack(volume, axis=0), instance_nums
 
     # Extract instance numbers to sort slices along the anatomical axis
     slices_with_info = []
