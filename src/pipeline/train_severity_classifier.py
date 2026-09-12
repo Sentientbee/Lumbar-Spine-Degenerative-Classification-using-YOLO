@@ -19,6 +19,22 @@ from src.models.severity_classifier import LumbarSeverityClassifier
 from src.metrics.competition_loss import RSNALogLoss, compute_rsna_log_loss, CLASS_WEIGHTS
 
 
+class TransformedSubset(torch.utils.data.Dataset):
+    """Wraps a Dataset or Subset and applies an augmentation transform strictly on retrieval."""
+    def __init__(self, subset: torch.utils.data.Dataset, transform: Optional[MedicalMultiSliceAugmentations] = None):
+        self.subset = subset
+        self.transform = transform
+
+    def __len__(self) -> int:
+        return len(self.subset)
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        x, y = self.subset[idx]
+        if self.transform is not None:
+            x = self.transform(x)
+        return x, y
+
+
 def train_one_epoch(
     model: nn.Module,
     dataloader: DataLoader,
@@ -119,17 +135,18 @@ def train_severity_classifier(
         full_dataset = LumbarCropDataset(is_synthetic=True, num_synthetic_samples=120)
         train_size = int(0.8 * len(full_dataset))
         val_size = len(full_dataset) - train_size
-        train_ds, val_ds = random_split(full_dataset, [train_size, val_size])
-        train_ds.dataset.transform = augmenter
+        raw_train_ds, val_ds = random_split(full_dataset, [train_size, val_size])
+        train_ds = TransformedSubset(raw_train_ds, transform=augmenter)
     else:
         # Load from actual image files in data_dir
         import glob
         img_files = glob.glob(os.path.join(data_dir, "*.npy")) or glob.glob(os.path.join(data_dir, "*.png"))
         samples = [(f, 0) for f in img_files]  # Default dummy labels if standalone
-        full_dataset = LumbarCropDataset(samples=samples, transform=augmenter)
+        full_dataset = LumbarCropDataset(samples=samples, transform=None)
         train_size = int(0.8 * len(full_dataset))
         val_size = len(full_dataset) - train_size
-        train_ds, val_ds = random_split(full_dataset, [train_size, val_size])
+        raw_train_ds, val_ds = random_split(full_dataset, [train_size, val_size])
+        train_ds = TransformedSubset(raw_train_ds, transform=augmenter)
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, drop_last=False)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)

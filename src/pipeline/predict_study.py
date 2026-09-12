@@ -57,10 +57,20 @@ def predict_study(
     # -------------------------------------------------------------
     print("[*] Stage 2: Initializing 2.5D severity classifier...")
     classifier = LumbarSeverityClassifier(backbone_name="resnet18", num_classes=3, pretrained=False)
-    if classifier_weights and os.path.exists(classifier_weights):
-        state_dict = torch.load(classifier_weights, map_location=dev)
+
+    # Resolve default weights if none specified
+    resolved_classifier_weights = classifier_weights
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    default_weights_path = os.path.join(project_root, "weights", "best_severity_classifier.pt")
+    if resolved_classifier_weights is None and os.path.exists(default_weights_path):
+        resolved_classifier_weights = default_weights_path
+
+    if resolved_classifier_weights and os.path.exists(resolved_classifier_weights):
+        state_dict = torch.load(resolved_classifier_weights, map_location=dev)
         classifier.load_state_dict(state_dict)
-        print(f"[+] Loaded classifier checkpoint: {classifier_weights}")
+        print(f"[+] Loaded classifier checkpoint: {resolved_classifier_weights}")
+    elif resolved_classifier_weights:
+        print(f"[!] Warning: Specified classifier weights '{resolved_classifier_weights}' not found. Running in baseline mode.")
     else:
         print("[!] No custom classifier checkpoint provided; running in zero-shot / baseline mode.")
 
@@ -87,9 +97,10 @@ def predict_study(
             probs_dict = classifier.predict_dict(roi_tensor)
             pred_severity = max(probs_dict.items(), key=lambda x: x[1])[0]
 
+            key_inst = instance_nums[k_idx] if 0 <= k_idx < len(instance_nums) else k_idx
             study_results["detected_levels"][lvl] = {
                 "detected": True,
-                "key_slice_instance": instance_nums[k_idx] if k_idx < len(instance_nums) else k_idx,
+                "key_slice_instance": key_inst,
                 "detector_confidence": round(float(det["conf"]), 4),
                 "bbox": [round(c, 2) for c in det["bbox"]],
                 "center": (cx, cy),

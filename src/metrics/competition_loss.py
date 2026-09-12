@@ -33,6 +33,9 @@ class RSNALogLoss(nn.Module):
         Returns:
             Scalar sample-weighted log loss.
         """
+        if targets.numel() == 0 or logits.shape[0] == 0:
+            return torch.tensor(0.0, device=logits.device, requires_grad=logits.requires_grad)
+
         probs = F.softmax(logits, dim=-1)
         probs = torch.clamp(probs, self.eps, 1.0 - self.eps)
 
@@ -40,12 +43,14 @@ class RSNALogLoss(nn.Module):
             # targets are class indices: (B,)
             sample_weights = self.weights[targets]
             log_p = torch.log(probs.gather(1, targets.unsqueeze(1)).squeeze(1))
-            weighted_loss = - (sample_weights * log_p).sum() / sample_weights.sum()
+            weight_sum = torch.clamp(sample_weights.sum(), min=1e-8)
+            weighted_loss = - (sample_weights * log_p).sum() / weight_sum
         else:
             # targets are one-hot / probabilities: (B, 3)
             sample_weights = (targets * self.weights.unsqueeze(0)).sum(dim=-1)
             log_p = (targets * torch.log(probs)).sum(dim=-1)
-            weighted_loss = - (sample_weights * log_p).sum() / sample_weights.sum()
+            weight_sum = torch.clamp(sample_weights.sum(), min=1e-8)
+            weighted_loss = - (sample_weights * log_p).sum() / weight_sum
 
         return weighted_loss
 
@@ -67,6 +72,9 @@ def compute_rsna_log_loss(
         Weighted log loss scalar.
     """
     y_true = np.asarray(y_true, dtype=int)
+    if len(y_true) == 0:
+        return 0.0
+
     probs = np.clip(np.asarray(y_pred_probs, dtype=float), eps, 1.0 - eps)
 
     # Normalize probabilities so they sum to 1
@@ -76,5 +84,9 @@ def compute_rsna_log_loss(
     true_class_probs = probs[np.arange(len(y_true)), y_true]
     log_losses = -np.log(true_class_probs)
 
-    weighted_loss = float(np.sum(weights * log_losses) / np.sum(weights))
+    total_weight = np.sum(weights)
+    if total_weight <= 0:
+        return 0.0
+
+    weighted_loss = float(np.sum(weights * log_losses) / total_weight)
     return weighted_loss

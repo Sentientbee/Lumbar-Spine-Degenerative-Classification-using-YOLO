@@ -47,6 +47,7 @@ def draw_bounding_boxes(
     """Draw styled bounding boxes and level labels on an MRI slice image."""
     pil_img = Image.fromarray(image_array).convert("RGB")
     draw = ImageDraw.Draw(pil_img)
+    img_w, img_h = pil_img.size
 
     for det in detections:
         lvl = det.get("level", "disc")
@@ -54,15 +55,27 @@ def draw_bounding_boxes(
         bbox = det.get("bbox", [0, 0, 10, 10])
         x1, y1, x2, y2 = bbox
 
+        # Clamp box to image dimensions
+        x1 = max(0.0, min(float(img_w - 1), float(x1)))
+        x2 = max(0.0, min(float(img_w - 1), float(x2)))
+        y1 = max(0.0, min(float(img_h - 1), float(y1)))
+        y2 = max(0.0, min(float(img_h - 1), float(y2)))
+
         # Draw bounding box
         draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
 
         if show_labels:
             conf = det.get("conf", 0.0)
             label = f"{lvl.upper()} ({conf*100:.0f}%)"
-            # Draw label tag background
-            draw.rectangle([x1, max(0, y1 - 18), x1 + len(label) * 8 + 6, y1], fill=color)
-            draw.text((x1 + 3, max(0, y1 - 16)), label, fill="#000000")
+            tag_width = len(label) * 8 + 6
+            tag_x2 = min(float(img_w), x1 + tag_width)
+            # If near top boundary, place label tag inside the top of box
+            if y1 >= 20:
+                draw.rectangle([x1, y1 - 18, tag_x2, y1], fill=color)
+                draw.text((x1 + 3, y1 - 16), label, fill="#000000")
+            else:
+                draw.rectangle([x1, y1, tag_x2, y1 + 18], fill=color)
+                draw.text((x1 + 3, y1 + 2), label, fill="#000000")
 
     return pil_img
 
@@ -126,7 +139,7 @@ def run_streamlit_app():
 
     if study_option == "Preloaded Synthetic MRI Study":
         series_dir = default_sample_dir
-        if not os.path.exists(series_dir):
+        if not os.path.exists(series_dir) or len(os.listdir(series_dir)) == 0:
             from demo.generate_sample_study import create_sample_study
             create_sample_study(series_dir, num_slices=15)
     else:
@@ -138,7 +151,8 @@ def run_streamlit_app():
     conf_thresh = st.sidebar.slider("YOLO11 Confidence Threshold", 0.1, 0.9, 0.25, 0.05)
     model_weights = st.sidebar.text_input("YOLO11 Checkpoint", value="yolo11s.pt")
 
-    default_cls_weights = "weights/best_severity_classifier.pt" if os.path.exists("weights/best_severity_classifier.pt") else ""
+    default_cls_path = os.path.join(PROJECT_ROOT, "weights", "best_severity_classifier.pt")
+    default_cls_weights = default_cls_path if os.path.exists(default_cls_path) else ""
     classifier_weights = st.sidebar.text_input("Stage 2 Classifier Weights", value=default_cls_weights)
 
     st.sidebar.markdown("---")
@@ -183,12 +197,16 @@ def run_streamlit_app():
     # Initialize Stage 2 Classifier
     classifier = LumbarSeverityClassifier(backbone_name="resnet18", num_classes=3)
     classifier_loaded = False
-    if classifier_weights and os.path.exists(classifier_weights):
+    resolved_cls = classifier_weights
+    if resolved_cls and not os.path.isabs(resolved_cls):
+        resolved_cls = os.path.join(PROJECT_ROOT, resolved_cls)
+
+    if resolved_cls and os.path.exists(resolved_cls):
         try:
-            state = torch.load(classifier_weights, map_location="cpu")
+            state = torch.load(resolved_cls, map_location="cpu")
             classifier.load_state_dict(state)
             classifier_loaded = True
-            st.sidebar.success(f"✅ Loaded Stage 2 weights: {os.path.basename(classifier_weights)}")
+            st.sidebar.success(f"✅ Loaded Stage 2 weights: {os.path.basename(resolved_cls)}")
         except Exception as e:
             st.sidebar.warning(f"Could not load classifier weights: {e}")
     classifier.eval()

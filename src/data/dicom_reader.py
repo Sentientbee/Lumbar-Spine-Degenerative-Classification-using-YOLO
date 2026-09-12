@@ -39,9 +39,10 @@ def apply_voi_lut(img: np.ndarray, dcm) -> np.ndarray:
         try:
             wc = float(wc)
             ww = float(ww)
-            img_min = wc - ww / 2.0
-            img_max = wc + ww / 2.0
-            return np.clip(img, img_min, img_max)
+            if ww > 0:
+                img_min = wc - ww / 2.0
+                img_max = wc + ww / 2.0
+                return np.clip(img, img_min, img_max)
         except (ValueError, TypeError):
             pass
 
@@ -134,6 +135,7 @@ def load_dicom_series(
             - 3D volume numpy array of shape (Depth, Height, Width), dtype uint8.
             - List of instance numbers corresponding to each slice.
     """
+    import re
     if not os.path.isdir(series_dir):
         raise NotADirectoryError(f"Series directory does not exist: {series_dir}")
 
@@ -149,7 +151,8 @@ def load_dicom_series(
         slices_with_info = []
         for f in image_files:
             base = os.path.splitext(os.path.basename(f))[0]
-            inst_num = int(base) if base.isdigit() else len(slices_with_info)
+            digits = re.findall(r'\d+', base)
+            inst_num = int(digits[-1]) if digits else len(slices_with_info)
             slices_with_info.append((inst_num, f))
         slices_with_info.sort(key=lambda x: x[0])
 
@@ -158,6 +161,17 @@ def load_dicom_series(
         for inst_num, fpath in slices_with_info:
             if fpath.endswith('.npy'):
                 img = np.load(fpath)
+                # Handle channel dimensions for 3D single-slice npy (1, H, W) or (H, W, 1) or (H, W, 3)
+                if img.ndim == 3:
+                    if img.shape[0] == 1:
+                        img = img.squeeze(0)
+                    elif img.shape[-1] == 1:
+                        img = img.squeeze(-1)
+                    elif img.shape[-1] == 3:
+                        img = np.mean(img, axis=-1)
+                # Scale float images in [0, 1] to [0, 255] before casting to uint8
+                if np.issubdtype(img.dtype, np.floating) and img.max() <= 1.0 and img.max() > 0:
+                    img = img * 255.0
             elif Image is not None:
                 img = np.array(Image.open(fpath).convert('L'))
             elif cv2 is not None:
@@ -183,9 +197,10 @@ def load_dicom_series(
             dcm = pydicom.dcmread(f, stop_before_pixels=True)
             instance_num = int(getattr(dcm, "InstanceNumber", os.path.splitext(os.path.basename(f))[0]))
         except Exception:
-            # Fallback to integer filename if header unreadable
+            # Fallback to integer digits from filename if header unreadable
             base = os.path.splitext(os.path.basename(f))[0]
-            instance_num = int(base) if base.isdigit() else 0
+            digits = re.findall(r'\d+', base)
+            instance_num = int(digits[-1]) if digits else 0
         slices_with_info.append((instance_num, f))
 
     slices_with_info.sort(key=lambda x: x[0])

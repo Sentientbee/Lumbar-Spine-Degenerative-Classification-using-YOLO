@@ -28,12 +28,12 @@ class LumbarCropDataset(Dataset):
         self.is_synthetic = is_synthetic
 
         if is_synthetic:
-            # Generate deterministic synthetic indices and labels for testing/demo
-            np.random.seed(42)
+            # Generate deterministic synthetic indices and labels for testing/demo using isolated RNG
+            rng = np.random.default_rng(42)
             self.samples = []
             for idx in range(num_synthetic_samples):
                 # Distribute severities realistically: 60% Mild, 25% Moderate, 15% Severe
-                p = np.random.rand()
+                p = rng.random()
                 label = 0 if p < 0.60 else (1 if p < 0.85 else 2)
                 self.samples.append((f"synth_{idx}", label))
         else:
@@ -74,6 +74,10 @@ class LumbarCropDataset(Dataset):
                 crop_array = np.load(path).astype(np.float32)
                 if crop_array.max() > 1.0:
                     crop_array = crop_array / 255.0
+                if crop_array.ndim == 2:
+                    crop_array = np.stack([crop_array] * 3, axis=0)
+                elif crop_array.ndim == 3 and crop_array.shape[-1] == 3 and crop_array.shape[0] != 3:
+                    crop_array = crop_array.transpose(2, 0, 1)
                 x_tensor = torch.from_numpy(crop_array)
             else:
                 # Load 2D image and repeat to 3 slices if not 3D

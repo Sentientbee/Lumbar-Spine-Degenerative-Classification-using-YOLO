@@ -38,10 +38,12 @@ def point_to_yolo_bbox(
     Returns:
         (x_center_norm, y_center_norm, width_norm, height_norm)
     """
-    x_c = np.clip(x / img_width, 0.0, 1.0)
-    y_c = np.clip(y / img_height, 0.0, 1.0)
-    w_norm = np.clip(box_size / img_width, 0.01, 1.0)
-    h_norm = np.clip(box_size / img_height, 0.01, 1.0)
+    w_safe = max(1, int(img_width))
+    h_safe = max(1, int(img_height))
+    x_c = np.clip(x / w_safe, 0.0, 1.0)
+    y_c = np.clip(y / h_safe, 0.0, 1.0)
+    w_norm = np.clip(box_size / w_safe, 0.01, 1.0)
+    h_norm = np.clip(box_size / h_safe, 0.01, 1.0)
     return float(x_c), float(y_c), float(w_norm), float(h_norm)
 
 
@@ -76,9 +78,9 @@ def extract_multislice_roi(
     y1 = max(0, center_y - half_crop)
     y2 = min(height, center_y + half_crop)
 
-    # Slice indices around key slice
-    offset = num_slices // 2
-    slice_indices = [np.clip(key_slice_idx + i, 0, depth - 1) for i in range(-offset, offset + 1)]
+    # Slice indices centered around key slice ensuring exact num_slices count
+    start = key_slice_idx - num_slices // 2
+    slice_indices = [int(np.clip(start + i, 0, depth - 1)) for i in range(num_slices)]
 
     channels = []
     for s_idx in slice_indices:

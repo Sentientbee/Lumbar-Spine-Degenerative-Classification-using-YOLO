@@ -19,8 +19,22 @@ class SpineLevelDetector:
     def __init__(self, model_weights: str = "yolo11s.pt", allow_simulation: bool = True):
         self.model_weights = model_weights
         self.allow_simulation = allow_simulation
+        self.model = None
+        self.is_custom_model = False
+
         if YOLO is not None:
-            self.model = YOLO(model_weights)
+            try:
+                self.model = YOLO(model_weights)
+                # Check if this model has classes corresponding to lumbar spine levels
+                if hasattr(self.model, 'names') and isinstance(self.model.names, dict):
+                    has_spine_classes = any(lvl in str(v).lower() for v in self.model.names.values() for lvl in LEVELS)
+                    if has_spine_classes:
+                        self.is_custom_model = True
+            except Exception as e:
+                if not allow_simulation:
+                    raise e
+                print(f"[!] Could not load YOLO model from '{model_weights}': {e}. Operating in anatomical simulation mode.")
+                self.model = None
         else:
             if not allow_simulation:
                 raise ImportError("Ultralytics is required. Install with `pip install ultralytics>=8.3.0`.")
@@ -38,6 +52,11 @@ class SpineLevelDetector:
         device: str = "auto"
     ) -> Any:
         """Train YOLO11 on the 5-class anatomical disc level dataset."""
+        if self.model is None:
+            if YOLO is None:
+                raise ImportError("Ultralytics is required to train. Install with `pip install ultralytics>=8.3.0`.")
+            self.model = YOLO(self.model_weights)
+
         if device == "auto":
             import torch
             device = "0,1" if torch.cuda.device_count() > 1 else ("0" if torch.cuda.is_available() else "cpu")
@@ -70,8 +89,8 @@ class SpineLevelDetector:
         if slice_img.ndim == 2:
             slice_img = np.stack([slice_img] * 3, axis=-1)
 
-        if self.model is None:
-            # Anatomical simulation fallback for demonstration and headless environments
+        # Simulation fallback for demo when model is None or generic COCO without spine fine-tuning
+        if self.model is None or (not self.is_custom_model and self.allow_simulation):
             h, w = slice_img.shape[:2]
             disc_y = [int(h * 0.24), int(h * 0.37), int(h * 0.51), int(h * 0.66), int(h * 0.81)]
             disc_x = [int(w * 0.46), int(w * 0.47), int(w * 0.48), int(w * 0.47), int(w * 0.44)]
@@ -81,7 +100,7 @@ class SpineLevelDetector:
                 dets.append({
                     "level": LEVELS[i],
                     "class_id": i,
-                    "conf": 0.92 - i * 0.02,
+                    "conf": float(0.92 - i * 0.02),
                     "bbox": [float(dx - box_half), float(dy - box_half), float(dx + box_half), float(dy + box_half)],
                     "center": (float(dx), float(dy)),
                 })
