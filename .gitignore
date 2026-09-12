@@ -43,3 +43,8 @@ test_images/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Output Reports
+diagnosis_report.json
+*.report.json
+

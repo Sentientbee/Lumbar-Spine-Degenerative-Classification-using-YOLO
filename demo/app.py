@@ -16,8 +16,9 @@ try:
 except ImportError:
     st = None
 
+import torch
 from src.data.dicom_reader import load_dicom_series
-from src.data.dataset_builder import LEVELS, SEVERITIES
+from src.data.dataset_builder import LEVELS, SEVERITIES, extract_multislice_roi
 from src.models.yolo_detector import SpineLevelDetector
 from src.models.severity_classifier import LumbarSeverityClassifier
 from src.pipeline.predict_study import predict_study
@@ -132,9 +133,14 @@ def run_streamlit_app():
         series_dir = st.sidebar.text_input("Local Series Directory", value=default_sample_dir)
 
     st.sidebar.markdown("---")
+    st.sidebar.markdown("---")
     st.sidebar.markdown("### ⚙️ Pipeline Parameters")
     conf_thresh = st.sidebar.slider("YOLO11 Confidence Threshold", 0.1, 0.9, 0.25, 0.05)
     model_weights = st.sidebar.text_input("YOLO11 Checkpoint", value="yolo11s.pt")
+
+    default_cls_weights = "weights/best_severity_classifier.pt" if os.path.exists("weights/best_severity_classifier.pt") else ""
+    classifier_weights = st.sidebar.text_input("Stage 2 Classifier Weights", value=default_cls_weights)
+
     st.sidebar.markdown("---")
     st.sidebar.caption("RSNA 2024 Lumbar Spine Degenerative Classification | Decoupled Two-Stage Architecture")
 
@@ -173,6 +179,19 @@ def run_streamlit_app():
     # Run detection on full volume
     detector = SpineLevelDetector(model_weights=model_weights, allow_simulation=True)
     detected_volume_info = detector.predict_volume(volume, conf_threshold=conf_thresh)
+
+    # Initialize Stage 2 Classifier
+    classifier = LumbarSeverityClassifier(backbone_name="resnet18", num_classes=3)
+    classifier_loaded = False
+    if classifier_weights and os.path.exists(classifier_weights):
+        try:
+            state = torch.load(classifier_weights, map_location="cpu")
+            classifier.load_state_dict(state)
+            classifier_loaded = True
+            st.sidebar.success(f"✅ Loaded Stage 2 weights: {os.path.basename(classifier_weights)}")
+        except Exception as e:
+            st.sidebar.warning(f"Could not load classifier weights: {e}")
+    classifier.eval()
 
     # -------------------------------------------------------------
     # Two-Column Layout: Slice Viewer & Clinical Diagnosis
@@ -213,17 +232,26 @@ def run_streamlit_app():
                 if det_info:
                     k_slice = det_info.get("key_slice_idx", depth // 2)
                     conf = det_info.get("conf", 0.0)
+                    center = det_info.get("center", (width // 2, height // 2))
+                    cx, cy = int(center[0]), int(center[1])
 
-                    # Simulated severity probabilities for demo
-                    if lvl == "l4_l5":
-                        probs = {"Normal/Mild": 0.08, "Moderate": 0.22, "Severe": 0.70}
-                        pred_sev = "Severe"
-                    elif lvl in ["l3_l4", "l5_s1"]:
-                        probs = {"Normal/Mild": 0.20, "Moderate": 0.68, "Severe": 0.12}
-                        pred_sev = "Moderate"
+                    if classifier_loaded:
+                        # Real model inference using loaded Stage 2 2.5D classifier
+                        roi = extract_multislice_roi(volume, key_slice_idx=k_slice, center_x=cx, center_y=cy, crop_size=128)
+                        roi_tensor = torch.from_numpy(roi).unsqueeze(0)  # (1, 3, 128, 128)
+                        probs = classifier.predict_dict(roi_tensor)
+                        pred_sev = max(probs.items(), key=lambda item: item[1])[0]
                     else:
-                        probs = {"Normal/Mild": 0.86, "Moderate": 0.11, "Severe": 0.03}
-                        pred_sev = "Normal/Mild"
+                        # Simulated severity probabilities for demo
+                        if lvl == "l4_l5":
+                            probs = {"Normal/Mild": 0.08, "Moderate": 0.22, "Severe": 0.70}
+                            pred_sev = "Severe"
+                        elif lvl in ["l3_l4", "l5_s1"]:
+                            probs = {"Normal/Mild": 0.20, "Moderate": 0.68, "Severe": 0.12}
+                            pred_sev = "Moderate"
+                        else:
+                            probs = {"Normal/Mild": 0.86, "Moderate": 0.11, "Severe": 0.03}
+                            pred_sev = "Normal/Mild"
 
                     badge_bg, badge_txt = SEVERITY_BADGES[pred_sev]
 

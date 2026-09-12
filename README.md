@@ -87,7 +87,9 @@ Lumbar-Spine-Degenerative-Classification-using-YOLO/
 │   │   └── competition_loss.py    # Official RSNA 2024 Weighted Log Loss (PyTorch & NumPy)
 │   └── pipeline/
 │       ├── __init__.py
-│       └── predict_study.py       # End-to-end inference CLI from raw DICOM to report JSON
+│       ├── predict_study.py       # End-to-end inference CLI from raw DICOM to report JSON
+│       ├── train_severity_classifier.py # Stage 2 classifier training loop with RSNA loss
+│       └── evaluate_classifier.py # Independent test & evaluation CLI with confusion matrix
 │
 ├── tests/
 │   └── test_pipeline.py           # Automated unit tests for data, models, and metrics
@@ -132,29 +134,7 @@ WANDB_API_KEY=your_wandb_api_key_here
 python -m unittest tests/test_pipeline.py
 ```
 
-### 4. Run End-to-End Inference CLI
-To run full-study automated diagnosis on a raw DICOM series directory:
-```bash
-python -m src.pipeline.predict_study \
-    --series_dir path/to/study/series \
-    --yolo_weights yolo11s.pt \
-    --output_json diagnosis_report.json
-```
-
-Sample output:
-```
-=======================================================
-           LUMBAR SPINE DIAGNOSIS SUMMARY           
-=======================================================
-Level L1_L2  | Severity: Normal/Mild | P(Mild)=0.91 P(Mod)=0.07 P(Sev)=0.02
-Level L2_L3  | Severity: Normal/Mild | P(Mild)=0.84 P(Mod)=0.13 P(Sev)=0.03
-Level L3_L4  | Severity: Moderate    | P(Mild)=0.21 P(Mod)=0.72 P(Sev)=0.07
-Level L4_L5  | Severity: Severe      | P(Mild)=0.05 P(Mod)=0.25 P(Sev)=0.70
-Level L5_S1  | Severity: Moderate    | P(Mild)=0.18 P(Mod)=0.69 P(Sev)=0.13
-=======================================================
-```
-
-### 5. Train Stage 2 Volumetric Severity Classifier
+### 4. Train Stage 2 Volumetric Severity Classifier
 Train the multi-slice 2.5D CNN backbone (`resnet18`, `resnet34`) on volumetric disc crops directly optimizing the official RSNA Weighted Log Loss:
 ```bash
 # Train on synthetic demonstration dataset (zero setup)
@@ -164,7 +144,23 @@ python -m src.pipeline.train_severity_classifier --epochs 10 --batch_size 16 --d
 python -m src.pipeline.train_severity_classifier --data_dir path/to/crops --epochs 25 --batch_size 32
 ```
 
-### 6. Launch Interactive Showcase Web App
+### 5. Independently Test & Evaluate Classifier
+Evaluate any saved classifier checkpoint on a test dataset to calculate RSNA weighted log loss, accuracy, per-class F1 scores, and a 3×3 confusion matrix:
+```bash
+python -m src.pipeline.evaluate_classifier --weights weights/best_severity_classifier.pt --samples 60
+```
+
+### 6. Run End-to-End Inference CLI
+To run full-study automated diagnosis on a raw DICOM series directory:
+```bash
+python -m src.pipeline.predict_study \
+    --series_dir path/to/study/series \
+    --yolo_weights yolo11s.pt \
+    --classifier_weights weights/best_severity_classifier.pt \
+    --output_json diagnosis_report.json
+```
+
+### 7. Launch Interactive Showcase Web App
 Experience the interactive diagnosis demo with slice scrubbing, YOLO11 disc overlays, and real-time severity distribution bars:
 ```bash
 # Optional: Generate a fresh synthetic sample study (15 slices)
