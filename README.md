@@ -154,7 +154,17 @@ Level L5_S1  | Severity: Moderate    | P(Mild)=0.18 P(Mod)=0.69 P(Sev)=0.13
 =======================================================
 ```
 
-### 5. Launch Interactive Showcase Web App
+### 5. Train Stage 2 Volumetric Severity Classifier
+Train the multi-slice 2.5D CNN backbone (`resnet18`, `resnet34`) on volumetric disc crops directly optimizing the official RSNA Weighted Log Loss:
+```bash
+# Train on synthetic demonstration dataset (zero setup)
+python -m src.pipeline.train_severity_classifier --epochs 10 --batch_size 16 --demo
+
+# Or train on extracted patient volumetric crops
+python -m src.pipeline.train_severity_classifier --data_dir path/to/crops --epochs 25 --batch_size 32
+```
+
+### 6. Launch Interactive Showcase Web App
 Experience the interactive diagnosis demo with slice scrubbing, YOLO11 disc overlays, and real-time severity distribution bars:
 ```bash
 # Optional: Generate a fresh synthetic sample study (15 slices)
