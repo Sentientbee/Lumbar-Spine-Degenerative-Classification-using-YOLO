@@ -1,0 +1,15 @@
+# Dataset configuration for Stage 1: Lumbar Spine Anatomical Level Localizer
+# Trained using Ultralytics YOLO11 across Sagittal and Axial MRI sequences
+
+path: data/stage1_levels # dataset root directory
+train: images/train  
+val: images/val 
+test: images/val 
+
+# 5 Anatomical Intervertebral Disc Levels
+names:
+  0: l1_l2
+  1: l2_l3
+  2: l3_l4
+  3: l4_l5
+  4: l5_s1

@@ -27,7 +27,8 @@ wandb/
 .comet/
 
 # Medical Data & Archives
-data/
+/data/
+!src/data/
 data_fold*/
 *.zip
 *.tar
