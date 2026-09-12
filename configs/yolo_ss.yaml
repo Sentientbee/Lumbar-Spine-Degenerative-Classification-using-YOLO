@@ -1,0 +1,40 @@
+# Dataset configuration for Subarticular Stenosis (SS) - RSNA 2024
+# Condition scanned primarily on Axial T2 MRI series
+
+path: data_fold0 # dataset root dir (relative to project or Kaggle /kaggle/working/data_fold0)
+train: images/train  
+val: images/val 
+test: images/val 
+
+# 30 Classes: Left/Right Subarticular Stenosis across 5 levels and 3 severities
+names:
+  0: left_subarticular_stenosis_l1_l2_normal/mild
+  1: left_subarticular_stenosis_l1_l2_moderate
+  2: left_subarticular_stenosis_l1_l2_severe
+  3: left_subarticular_stenosis_l2_l3_normal/mild
+  4: left_subarticular_stenosis_l2_l3_moderate
+  5: left_subarticular_stenosis_l2_l3_severe
+  6: left_subarticular_stenosis_l3_l4_normal/mild
+  7: left_subarticular_stenosis_l3_l4_moderate
+  8: left_subarticular_stenosis_l3_l4_severe
+  9: left_subarticular_stenosis_l4_l5_normal/mild
+  10: left_subarticular_stenosis_l4_l5_moderate
+  11: left_subarticular_stenosis_l4_l5_severe
+  12: left_subarticular_stenosis_l5_s1_normal/mild
+  13: left_subarticular_stenosis_l5_s1_moderate
+  14: left_subarticular_stenosis_l5_s1_severe
+  15: right_subarticular_stenosis_l1_l2_normal/mild
+  16: right_subarticular_stenosis_l1_l2_moderate
+  17: right_subarticular_stenosis_l1_l2_severe
+  18: right_subarticular_stenosis_l2_l3_normal/mild
+  19: right_subarticular_stenosis_l2_l3_moderate
+  20: right_subarticular_stenosis_l2_l3_severe
+  21: right_subarticular_stenosis_l3_l4_normal/mild
+  22: right_subarticular_stenosis_l3_l4_moderate
+  23: right_subarticular_stenosis_l3_l4_severe
+  24: right_subarticular_stenosis_l4_l5_normal/mild
+  25: right_subarticular_stenosis_l4_l5_moderate
+  26: right_subarticular_stenosis_l4_l5_severe
+  27: right_subarticular_stenosis_l5_s1_normal/mild
+  28: right_subarticular_stenosis_l5_s1_moderate
+  29: right_subarticular_stenosis_l5_s1_severe

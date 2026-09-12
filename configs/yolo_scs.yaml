@@ -1,0 +1,25 @@
+# Dataset configuration for Spinal Canal Stenosis (SCS) - RSNA 2024
+# Condition scanned primarily on Sagittal T2 / STIR MRI series
+
+path: data_fold0 # dataset root dir (relative to project or Kaggle /kaggle/working/data_fold0)
+train: images/train  
+val: images/val 
+test: images/val 
+
+# 15 Classes: Spinal Canal Stenosis across 5 levels and 3 severities
+names:
+  0: spinal_canal_stenosis_l1_l2_normal/mild
+  1: spinal_canal_stenosis_l1_l2_moderate
+  2: spinal_canal_stenosis_l1_l2_severe
+  3: spinal_canal_stenosis_l2_l3_normal/mild
+  4: spinal_canal_stenosis_l2_l3_moderate
+  5: spinal_canal_stenosis_l2_l3_severe
+  6: spinal_canal_stenosis_l3_l4_normal/mild
+  7: spinal_canal_stenosis_l3_l4_moderate
+  8: spinal_canal_stenosis_l3_l4_severe
+  9: spinal_canal_stenosis_l4_l5_normal/mild
+  10: spinal_canal_stenosis_l4_l5_moderate
+  11: spinal_canal_stenosis_l4_l5_severe
+  12: spinal_canal_stenosis_l5_s1_normal/mild
+  13: spinal_canal_stenosis_l5_s1_moderate
+  14: spinal_canal_stenosis_l5_s1_severe

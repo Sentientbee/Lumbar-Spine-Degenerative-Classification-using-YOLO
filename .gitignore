@@ -1,0 +1,44 @@
+# Environments & Secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Python & Jupyter
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Model Checkpoints & Weights
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+runs/
+lsdc_yolov8/
+lsdc_yolo11/
+wandb/
+.comet/
+
+# Medical Data & Archives
+data/
+data_fold*/
+*.zip
+*.tar
+*.tar.gz
+*.dcm
+train_images/
+test_images/
+*.cache
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
