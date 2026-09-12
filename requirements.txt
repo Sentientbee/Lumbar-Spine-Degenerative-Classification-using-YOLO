@@ -21,3 +21,7 @@ comet-ml>=3.38.0
 wandb>=0.16.0
 python-dotenv>=1.0.0
 ipywidgets>=8.0.0
+
+# Interactive Showcase Web App
+streamlit>=1.30.0
+plotly>=5.15.0

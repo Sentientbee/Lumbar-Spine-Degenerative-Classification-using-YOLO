@@ -68,6 +68,10 @@ Lumbar-Spine-Degenerative-Classification-using-YOLO/
 │   ├── yolo_scs.yaml              # Single-stage: Spinal Canal Stenosis (15 classes)
 │   └── yolo_ss.yaml               # Single-stage: Subarticular Stenosis (30 classes)
 │
+├── demo/                          # Interactive Showcase Web App
+│   ├── app.py                     # Streamlit web application
+│   └── generate_sample_study.py   # Synthetic MRI generator for instant zero-setup demo
+│
 ├── src/                           # Modular Python package
 │   ├── __init__.py
 │   ├── data/
@@ -90,7 +94,8 @@ Lumbar-Spine-Degenerative-Classification-using-YOLO/
 │
 ├── lsdc-train-yolo-nfn.ipynb      # Training pipeline for Neural Foraminal Narrowing (YOLO11)
 ├── lsdc-train-yolo-scs.ipynb      # Training pipeline for Spinal Canal Stenosis (YOLO11)
-└── lsdc-train-yolo-ss.ipynb       # Training pipeline for Subarticular Stenosis (YOLO11)
+├── lsdc-train-yolo-ss.ipynb       # Training pipeline for Subarticular Stenosis (YOLO11)
+└── pyproject.toml                 # Package definition (pip install -e .)
 ```
 
 ---
@@ -147,6 +152,16 @@ Level L3_L4  | Severity: Moderate    | P(Mild)=0.21 P(Mod)=0.72 P(Sev)=0.07
 Level L4_L5  | Severity: Severe      | P(Mild)=0.05 P(Mod)=0.25 P(Sev)=0.70
 Level L5_S1  | Severity: Moderate    | P(Mild)=0.18 P(Mod)=0.69 P(Sev)=0.13
 =======================================================
+```
+
+### 5. Launch Interactive Showcase Web App
+Experience the interactive diagnosis demo with slice scrubbing, YOLO11 disc overlays, and real-time severity distribution bars:
+```bash
+# Optional: Generate a fresh synthetic sample study (15 slices)
+python demo/generate_sample_study.py --output_dir data/sample_study
+
+# Launch the Streamlit application
+streamlit run demo/app.py
 ```
 
 ---
